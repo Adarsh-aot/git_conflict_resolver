@@ -1,0 +1,36 @@
+detect_conflicts_task:
+  description: >
+    Scan the local Git repository for all files that have unresolved merge conflicts.
+    Return a list of file paths that contain the conflict markers <<<<<<<, =======, >>>>>>>.
+  expected_output: >
+    A list of files with unresolved merge conflicts.
+  agent: conflict_detector
+
+resolve_conflicts_task:
+  description: >
+    For each file with merge conflicts:
+    - If the keyword "WEBBAR" is found in the current or incoming block, automatically accept that block.
+    - If the keyword is not found, prompt the user to select:
+        1. Accept current block
+        2. Accept incoming block
+        3. Accept both blocks
+    Your final answer MUST be the fully resolved files saved back to disk.
+  expected_output: >
+    All files with conflicts resolved and saved back to disk.
+  context:
+    - detect_conflicts_task
+  agent: conflict_resolver
+
+summary_task:
+  description: >
+    Generate a summary report that lists:
+    - Files resolved automatically (keyword "WEBBAR" found)
+    - Files resolved by user input
+    Output the summary in a markdown format.
+  expected_output: >
+    A markdown file summarizing all resolutions, separated by automatic and manual resolutions.
+  context:
+    - detect_conflicts_task
+    - resolve_conflicts_task
+  agent: summary_reporter
+  output_file: output/conflicts.md
