@@ -1,10 +1,12 @@
 detect_conflicts_task:
   description: >
-    Scan the local Git repository for all files that have unresolved merge conflicts.
+    Scan the directory {directory} for all files that have unresolved Git merge conflicts.
     Return a list of file paths that contain the conflict markers <<<<<<<, =======, >>>>>>>.
+    If no files are found, return an empty list and stop the tasks.
   expected_output: >
-    A list of files with unresolved merge conflicts.
+    A list of conflicted file paths in the given directory.
   agent: conflict_detector
+  repo_path: { directory }
 
 resolve_conflicts_task:
   description: >
@@ -20,6 +22,7 @@ resolve_conflicts_task:
   context:
     - detect_conflicts_task
   agent: conflict_resolver
+  keyword: WEBBAR
 
 summary_task:
   description: >

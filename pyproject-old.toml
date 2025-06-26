@@ -2,14 +2,12 @@
 name = "git_conflict_resolver"
 version = "0.1.0"
 description = "git_conflict_resolver using crewAI"
-authors = [
-    { name = "Your Name", email = "you@example.com" },
-]
+authors = [{ name = "Your Name", email = "you@example.com" }]
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "crewai[tools]>=0.130.0,<1.0.0",
     "google-generativeai>=0.5.0",
-    "python-dotenv>=1.0.1",
+    "python-dotenv>=1.0.1"
 ]
 
 [project.scripts]
@@ -20,7 +18,8 @@ replay = "git_conflict_resolver.main:replay"
 test = "git_conflict_resolver.main:test"
 
 [build-system]
-requires = [
-    "hatchling",
-]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.crewai]
+type = "crew"
