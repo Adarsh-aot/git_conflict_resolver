@@ -9,15 +9,16 @@ def run():
     """
     inputs = {
         'directory': "D:\AI Agent\git_conflict_detector\RebaseAutomation",
+        'keyword': 'WEBBAR'
     }
 
     # Create and run the crew
     
-    # try:
-    GitConflictResolverCrew().crew().kickoff(inputs=inputs)
+    try:
+        GitConflictResolverCrew().crew().kickoff(inputs=inputs)
         
-    # except Exception as e:
-    #     raise Exception(f"An error occurred while running the crew: {e}")
+    except Exception as e:
+        raise Exception(f"An error occurred while running the crew: {e}")
     
 
     print("\n\nReport has been saved to output/conflicts.md")

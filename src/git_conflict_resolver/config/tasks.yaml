@@ -2,27 +2,38 @@ detect_conflicts_task:
   description: >
     Scan the directory {directory} for all files that have unresolved Git merge conflicts.
     Return a list of file paths that contain the conflict markers <<<<<<<, =======, >>>>>>>.
-    If no files are found, return an empty list and stop the tasks.
+    If no files are found, return an empty list and terminate the tasks.
   expected_output: >
     A list of conflicted file paths in the given directory.
   agent: conflict_detector
-  repo_path: { directory }
+  # repo_path: { directory }
 
 resolve_conflicts_task:
   description: >
-    For each file with merge conflicts:
-    - If the keyword "WEBBAR" is found in the current or incoming block, automatically accept that block.
-    - If the keyword is not found, prompt the user to select:
+    You are responsible for resolving Git conflicts in the files identified by the previous task.
+    You will receive a list of file paths that contain unresolved conflicts.
+
+    If the list is empty, you MUST return: "No conflicts to resolve. Skipping task."
+
+    Otherwise, proceed with resolving each conflict.
+    For each file, you will:
+    - Read the file and identify the conflict markers.
+    - Check if the keyword "WEBBAR" is present in either the current or incoming block of the conflict.
+    - If the keyword "WEBBAR" is found, automatically accept that block and save the file.
+    - If the keyword is not found, you will prompt the human user to choose one of the following options:
         1. Accept current block
         2. Accept incoming block
         3. Accept both blocks
-    Your final answer MUST be the fully resolved files saved back to disk.
+        4. Manually resolve the conflict
+    - If the user chooses to manually resolve, you will provide the file content and ask for their input.
+    - After resolving each conflict, save the file back to disk.
+
+  # human_input: True
   expected_output: >
     All files with conflicts resolved and saved back to disk.
-  context:
-    - detect_conflicts_task
+  context: [detect_conflicts_task]
   agent: conflict_resolver
-  keyword: WEBBAR
+  output_file: output/conflicts.md
 
 summary_task:
   description: >

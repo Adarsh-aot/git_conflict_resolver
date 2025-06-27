@@ -14,7 +14,7 @@ import os
 gemini_llm = LLM(
        model="gemini/gemini-2.0-flash-001",  # Or specify your desired Gemini model
        api_key=os.environ.get("GEMINI_API_KEY"),
-       temperature=0.7  # Adjust temperature as needed
+       temperature=0     # Adjust temperature as needed
    )
 
 @CrewBase
@@ -58,21 +58,18 @@ class GitConflictResolverCrew:
         
         return Task(
             config=self.tasks_config['detect_conflicts_task'], # type: ignore[index]
-            output_file='conflicts.md'
         )
 
     @task
     def resolve_conflicts_task(self) -> Task:
         return Task(
             config=self.tasks_config['resolve_conflicts_task'], # type: ignore[index]
-            output_file='report.md'
         )
 
     @task
     def summary_task(self) -> Task:
         return Task(
             config=self.tasks_config['summary_task'], # type: ignore[index]
-            output_file='report.md'
         )
 
     @crew
