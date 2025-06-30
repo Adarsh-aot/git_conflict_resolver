@@ -2,33 +2,27 @@ detect_conflicts_task:
   description: >
     Scan the directory {directory} for all files that have unresolved Git merge conflicts.
     Return a list of file paths that contain the conflict markers <<<<<<<, =======, >>>>>>>.
-    If no files are found, return an empty list and terminate the tasks.
+    If no files are found, return an empty list and skip the next task.
   expected_output: >
     A list of conflicted file paths in the given directory.
   agent: conflict_detector
-  # repo_path: { directory }
 
 resolve_conflicts_task:
   description: >
     You are responsible for resolving Git conflicts in the files identified by the previous task.
     You will receive a list of file paths that contain unresolved conflicts.
-
-    If the list is empty, you MUST return: "No conflicts to resolve. Skipping task."
-
-    Otherwise, proceed with resolving each conflict.
     For each file, you will:
     - Read the file and identify the conflict markers.
-    - Check if the keyword "WEBBAR" is present in either the current or incoming block of the conflict.
-    - If the keyword "WEBBAR" is found, automatically accept that block and save the file.
-    - If the keyword is not found, you will prompt the human user to choose one of the following options:
+    - Check if the keyword "WEBBAR" is present.
+    - If both block contains the keyword, ask the user to choose one of the following options:
+      - Options:
         1. Accept current block
         2. Accept incoming block
         3. Accept both blocks
-        4. Manually resolve the conflict
-    - If the user chooses to manually resolve, you will provide the file content and ask for their input.
-    - After resolving each conflict, save the file back to disk.
-
-  # human_input: True
+        4. Manually edit the file
+    - If the keyword is present in only one of the block, automatically accept the block that has the keyword.
+    Apply the user's choice and write the updated content back to the file.
+  human_input: true
   expected_output: >
     All files with conflicts resolved and saved back to disk.
   context: [detect_conflicts_task]
