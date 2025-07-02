@@ -1,7 +1,7 @@
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, PrivateAttr
 import os
-from typing import Type, List
+from typing import Type, List, Optional
 
 class GitConflictFinderInput(BaseModel):
     """Input schema for GitConflictFinderTool."""
@@ -33,8 +33,9 @@ class GitConflictFinderTool(BaseTool):
         return conflicted_files
 
 class GitConflictResolverInput(BaseModel):
-    file_path: str = Field(..., description="Path to the file with git conflicts.")
-    keyword: str = Field(default="WEBBAR", description="Keyword to prioritize in resolving conflicts.")
+    """Input schema for GitConflictResolverTool."""
+    file_path: str = Field(..., description="Path to the file where conflicts need to be resolved.")
+    keyword: str = Field(default="WEBBAR", description="Keyword to favor during conflict resolution.")
 
 class GitConflictResolverTool(BaseTool):
     name: str = "Git Conflict Resolver"
@@ -58,14 +59,14 @@ class GitConflictResolverTool(BaseTool):
         i = 0
         while i < len(lines):
             if lines[i].startswith('<<<<<<<'):
-                current_block = []
-                incoming_block = []
+                current_block, incoming_block = [], []
                 i += 1
 
                 while i < len(lines) and not lines[i].startswith('======='):
                     current_block.append(lines[i])
                     i += 1
                 i += 1  # skip =======
+
                 while i < len(lines) and not lines[i].startswith('>>>>>>>'):
                     incoming_block.append(lines[i])
                     i += 1
@@ -74,43 +75,52 @@ class GitConflictResolverTool(BaseTool):
                 current_text = ''.join(current_block)
                 incoming_text = ''.join(incoming_block)
 
-                if self._keyword in current_text:
+                current_has_keyword = self._keyword in current_text
+                incoming_has_keyword = self._keyword in incoming_text
+
+                # === Decision tree ===
+                if current_has_keyword and not incoming_has_keyword:
                     resolved_lines.extend(current_block)
                     self._auto_resolved.append(file_path)
-                elif self._keyword in incoming_text:
+
+                elif incoming_has_keyword and not current_has_keyword:
                     resolved_lines.extend(incoming_block)
                     self._auto_resolved.append(file_path)
-                else:
-                    # User interaction
-                    print(f"\nConflict in {file_path}:")
+
+                elif current_has_keyword and incoming_has_keyword:
+                    # Ask user since both blocks have keyword
+                    print(f"\n🔀 Conflict in {file_path} — both blocks contain '{self._keyword}'!")
                     print("======= Current Block =======")
                     print(current_text)
                     print("======= Incoming Block =======")
                     print(incoming_text)
-                    print("======= Options =======")
+                    print("Choose an option:")
                     print("1. Accept current block")
                     print("2. Accept incoming block")
                     print("3. Accept both blocks")
                     print("4. Manually resolve")
 
-                    choice = input("Choose option (1-4): ").strip()
-
-                    if choice == '1':
-                        resolved_lines.extend(current_block)
-                    elif choice == '2':
-                        resolved_lines.extend(incoming_block)
-                    elif choice == '3':
-                        resolved_lines.extend(current_block + incoming_block)
-                    elif choice == '4':
-                        print("\n======= Full Conflict Block =======")
-                        print("".join(current_block + ['=======\n'] + incoming_block))
-                        manual_input = input("Paste your manual resolution here:\n")
-                        resolved_lines.append(manual_input + '\n')
-                    else:
-                        print("Invalid choice. Defaulting to keeping both.")
-                        resolved_lines.extend(current_block + ['=======\n'] + incoming_block)
-
+                    choice = input("Choice (1-4): ").strip()
+                    self._handle_user_choice(choice, resolved_lines, current_block, incoming_block)
                     self._user_resolved.append(file_path)
+
+                else:
+                    # No block has keyword — prompt user
+                    print(f"\n⚠️ Conflict in {file_path} — keyword '{self._keyword}' not found in any block.")
+                    print("======= Current Block =======")
+                    print(current_text)
+                    print("======= Incoming Block =======")
+                    print(incoming_text)
+                    print("Choose an option:")
+                    print("1. Accept current block")
+                    print("2. Accept incoming block")
+                    print("3. Accept both blocks")
+                    print("4. Manually resolve")
+
+                    choice = input("Choice (1-4): ").strip()
+                    self._handle_user_choice(choice, resolved_lines, current_block, incoming_block)
+                    self._user_resolved.append(file_path)
+
             else:
                 resolved_lines.append(lines[i])
                 i += 1
@@ -118,15 +128,32 @@ class GitConflictResolverTool(BaseTool):
         with open(file_path, 'w', encoding='utf-8') as f:
             f.writelines(resolved_lines)
 
+    def _handle_user_choice(self, choice, resolved_lines, current_block, incoming_block):
+        if choice == '1':
+            resolved_lines.extend(current_block)
+        elif choice == '2':
+            resolved_lines.extend(incoming_block)
+        elif choice == '3':
+            resolved_lines.extend(current_block + incoming_block)
+        elif choice == '4':
+            print("\n📝 Manual Resolution:")
+            print("Full Conflict:")
+            print("".join(current_block + ['=======\n'] + incoming_block))
+            manual_input = input("Paste your manual resolution here:\n")
+            resolved_lines.append(manual_input + '\n')
+        else:
+            print("❌ Invalid choice. Defaulting to both blocks.")
+            resolved_lines.extend(current_block + ['=======\n'] + incoming_block)
+
     def generate_summary(self) -> str:
         summary = "# Git Conflict Resolution Summary\n\n"
 
-        summary += "## Automatically Resolved (Keyword found)\n"
-        for file in set(self._auto_resolved):
+        summary += "## ✅ Automatically Resolved (Keyword found)\n"
+        for file in sorted(set(self._auto_resolved)):
             summary += f"- {file}\n"
 
-        summary += "\n## Resolved by User Input\n"
-        for file in set(self._user_resolved):
+        summary += "\n## 👤 Resolved by User Input\n"
+        for file in sorted(set(self._user_resolved)):
             summary += f"- {file}\n"
 
         return summary

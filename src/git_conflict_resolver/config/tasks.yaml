@@ -9,25 +9,30 @@ detect_conflicts_task:
 
 resolve_conflicts_task:
   description: >
-    You are responsible for resolving Git conflicts in the files identified by the previous task.
-    You will receive a list of file paths that contain unresolved conflicts.
-    For each file, you will:
-    - Read the file and identify the conflict markers.
-    - Check if the keyword "WEBBAR" is present.
-    - If both block contains the keyword, ask the user to choose one of the following options:
-      - Options:
-        1. Accept current block
-        2. Accept incoming block
-        3. Accept both blocks
-        4. Manually edit the file
-    - If the keyword is present in only one of the block, automatically accept the block that has the keyword.
-    Apply the user's choice and write the updated content back to the file.
-  human_input: true
+    Resolve conflicts in the files detected in the previous task.
+
+    For each conflict:
+
+    - If keyword "WEBBAR" is **not** found in either block, ask the user:
+      1. Accept current block
+      2. Accept incoming block
+      3. Accept both blocks
+      4. Manually resolve
+
+    - If keyword "WEBBAR" is found in **both** blocks, ask the user:
+      1. Accept current block
+      2. Accept incoming block
+      3. Accept both blocks
+      4. Manually resolve
+      
+    - If keyword "WEBBAR" is found in one of the blocks, accept that one automatically.
+
+    Your final answer MUST be the resolved file contents saved back to disk.
   expected_output: >
-    All files with conflicts resolved and saved back to disk.
-  context: [detect_conflicts_task]
+    Either resolved file saved or a prompt requesting user input.
   agent: conflict_resolver
-  output_file: output/conflicts.md
+  context: [detect_conflicts_task]
+  human_input: true
 
 summary_task:
   description: >
