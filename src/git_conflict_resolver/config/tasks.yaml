@@ -1,6 +1,6 @@
 detect_conflicts_task:
   description: >
-    Scan the directory {directory} for all files that have unresolved Git merge conflicts.
+    Scan the {directory} for all files that have unresolved Git merge conflicts.
     Return a list of file paths that contain the conflict markers <<<<<<<, =======, >>>>>>>.
     If no files are found, return an empty list and skip the next task.
   expected_output: >
@@ -28,6 +28,7 @@ resolve_conflicts_task:
     - If keyword "WEBBAR" is found in one of the blocks, accept that one automatically.
 
     Your final answer MUST be the resolved file contents saved back to disk.
+    If unresolved, generate human-readable `.conflicted` files for manual intervention.
   expected_output: >
     Either resolved file saved or a prompt requesting user input.
   agent: conflict_resolver

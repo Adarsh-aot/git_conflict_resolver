@@ -79,4 +79,5 @@ class GitConflictResolverCrew:
             tasks=self.tasks,
             process=Process.sequential,
             verbose=True,
+            handle_error="warn"
         )
