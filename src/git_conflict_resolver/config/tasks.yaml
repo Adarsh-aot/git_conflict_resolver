@@ -1,36 +1,25 @@
 detect_conflicts_task:
   description: >
-    Scan the {directory} for all files that have unresolved Git merge conflicts.
+    Scan the {file_list_path} for all files that have unresolved Git merge conflicts.
     Return a list of file paths that contain the conflict markers <<<<<<<, =======, >>>>>>>.
-    If no files are found, return an empty list and skip the next task.
   expected_output: >
-    A list of conflicted file paths in the given directory.
+    A list of conflicted file paths in the given file list.
   agent: conflict_detector
+  auto_execute: true
 
 resolve_conflicts_task:
   description: >
     Resolve conflicts in the files detected in the previous task.
 
     For each conflict:
-
-    - If keyword "WEBBAR" is **not** found in either block, ask the user:
-      1. Accept current block
-      2. Accept incoming block
-      3. Accept both blocks
-      4. Manually resolve
-
-    - If keyword "WEBBAR" is found in **both** blocks, ask the user:
-      1. Accept current block
-      2. Accept incoming block
-      3. Accept both blocks
-      4. Manually resolve
-      
-    - If keyword "WEBBAR" is found in one of the blocks, accept that one automatically.
+    - If keyword "WEBBAR" is not found in either block, ask the user.
+    - If keyword "WEBBAR" is found in both, ask the user.
+    - If keyword "WEBBAR" is found in one, auto-select that one.
 
     Your final answer MUST be the resolved file contents saved back to disk.
-    If unresolved, generate human-readable `.conflicted` files for manual intervention.
+    If unresolved, generate human-readable `.conflicted` files or leave markers for manual editing.
   expected_output: >
-    Either resolved file saved or a prompt requesting user input.
+    Either the resolved file written to disk or left open in editor for manual intervention.
   agent: conflict_resolver
   context: [detect_conflicts_task]
   human_input: true
@@ -40,11 +29,13 @@ summary_task:
     Generate a summary report that lists:
     - Files resolved automatically (keyword "WEBBAR" found)
     - Files resolved by user input
-    Output the summary in a markdown format.
+    - Files left for manual editing
+
+    Output the summary in markdown format.
   expected_output: >
-    A markdown file summarizing all resolutions, separated by automatic and manual resolutions.
+    A markdown file summarizing all resolutions.
+  agent: summary_reporter
   context:
     - detect_conflicts_task
     - resolve_conflicts_task
-  agent: summary_reporter
   output_file: output/conflicts.md

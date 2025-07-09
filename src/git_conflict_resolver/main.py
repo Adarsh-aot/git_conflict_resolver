@@ -8,7 +8,8 @@ def run():
     Run the Resolver crew.
     """
     inputs = {
-        'directory': "D:\AI Agent\git_conflict_detector\RebaseAutomation",
+        # 'directory': "D:\AI Agent\git_conflict_detector\RebaseAutomation\hello.py",
+        'file_list_path': 'D:\AI Agent\conflict_files.txt',
         'keyword': 'WEBBAR'
     }
 
@@ -21,7 +22,7 @@ def run():
         raise Exception(f"An error occurred while running the crew: {e}")
     
 
-    print("\n\nReport has been saved to output/conflicts.md")
+    print("\nConflict resolution complete. See 'output/conflicts.md'.")
 
 
 if __name__ == "__main__":
