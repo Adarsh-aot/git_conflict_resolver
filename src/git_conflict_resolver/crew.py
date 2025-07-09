@@ -1,7 +1,8 @@
 from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from git_conflict_resolver.tools.custom_tool import GitConflictFinderTool, GitConflictResolverTool
+from git_conflict_resolver.tools.git_conflict_finder_tool import GitConflictFinderTool
+from git_conflict_resolver.tools.git_conflict_resolver_tool import GitConflictResolverTool
 from typing import List
 import os
 

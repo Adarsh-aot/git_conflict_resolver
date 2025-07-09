@@ -2,52 +2,10 @@ from crewai.tools import BaseTool
 from pydantic import BaseModel, Field, PrivateAttr
 from typing import Type, List
 import subprocess
-import os
-
-
-class GitConflictFinderInput(BaseModel):
-    """Input schema for GitConflictFinderTool."""
-    file_list_path: str = Field(..., description="Path to the file containing list of file paths to scan.")
-
-class GitConflictFinderTool(BaseTool):
-    name: str = "Git Conflict Finder"
-    description: str = "Scans files listed in a .txt file and finds Git merge conflicts."
-    args_schema: Type[BaseModel] = GitConflictFinderInput
-
-    def _run(self, file_list_path: str) -> str:
-        conflicted_files = self._find_conflicted_files(file_list_path)
-        if not conflicted_files:
-            return "✅ No conflicts found in any of the listed files."
-        return f"⚠️ Found conflicts in {len(conflicted_files)} files:\n" + "\n".join(conflicted_files)
-
-    def _find_conflicted_files(self, file_list_path: str) -> List[str]:
-        conflicted_files = []
-
-        if not os.path.exists(file_list_path):
-            return [f"❌ File list not found: {file_list_path}"]
-
-        with open(file_list_path, 'r', encoding='utf-8') as f:
-            file_paths = [line.strip('- ').strip() for line in f if line.strip()]
-
-        for path in file_paths:
-            if not os.path.isfile(path):
-                print(f"⚠️ Skipping: {path} (not a valid file)")
-                continue
-            try:
-                with open(path, 'r', encoding='utf-8', errors='ignore') as file:
-                    content = file.read()
-                    if '<<<<<<<' in content and '=======' in content and '>>>>>>>' in content:
-                        conflicted_files.append(path)
-            except Exception as e:
-                print(f"❌ Error reading {path}: {e}")
-
-        return conflicted_files
-
 
 class GitConflictResolverInput(BaseModel):
     file_path: str = Field(..., description="Path to the file to resolve")
     keyword: str = Field(default="WEBBAR", description="Keyword to prioritize when resolving conflicts")
-
 
 class GitConflictResolverTool(BaseTool):
     name: str = "Git Conflict Resolver"
@@ -78,12 +36,12 @@ class GitConflictResolverTool(BaseTool):
                 while i < len(lines) and not lines[i].startswith("======="):
                     current_block.append(lines[i])
                     i += 1
-                i += 1  # skip =======
+                i += 1
 
                 while i < len(lines) and not lines[i].startswith(">>>>>>>"):
                     incoming_block.append(lines[i])
                     i += 1
-                i += 1  # skip >>>>>>>
+                i += 1
 
                 current_text = "".join(current_block)
                 incoming_text = "".join(incoming_block)
@@ -143,7 +101,6 @@ class GitConflictResolverTool(BaseTool):
         elif choice == "3":
             resolved_lines.extend(current_block + incoming_block)
         else:
-            # Leave conflict markers and open editor
             resolved_lines.extend(["<<<<<<< CURRENT VERSION\n"])
             resolved_lines.extend(current_block)
             resolved_lines.append("=======\n")
@@ -159,18 +116,14 @@ class GitConflictResolverTool(BaseTool):
 
     def generate_summary(self) -> str:
         summary = "# Git Conflict Resolution Summary\n\n"
-
         summary += "## ✅ Automatically Resolved (keyword matched)\n"
-        for file in self._auto_resolved:
-            summary += f"- {file}\n"
+        summary += "\n".join(f"- {file}" for file in self._auto_resolved)
 
-        summary += "\n## 👤 Resolved by User Input\n"
-        for file in self._user_resolved:
-            summary += f"- {file}\n"
+        summary += "\n\n## 👤 Resolved by User Input\n"
+        summary += "\n".join(f"- {file}" for file in self._user_resolved)
 
-        summary += "\n## ✍️ Manual Edits In-Place (conflict kept)\n"
-        for file in self._manual_edit_in_place:
-            summary += f"- {file}\n"
+        summary += "\n\n## ✍️ Manual Edits In-Place (conflict kept)\n"
+        summary += "\n".join(f"- {file}" for file in self._manual_edit_in_place)
 
-        summary += "\n---\nNext steps:\n- Open unresolved files in your editor\n- `git add` and `git commit`\n"
+        summary += "\n\n---\nNext steps:\n- Open unresolved files in your editor\n- `git add` and `git commit`\n"
         return summary
