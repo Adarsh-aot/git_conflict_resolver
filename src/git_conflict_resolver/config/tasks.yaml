@@ -1,41 +1,31 @@
 detect_conflicts_task:
   description: >
-    Scan the {file_list_path} for all files that have unresolved Git merge conflicts.
-    Return a list of file paths that contain the conflict markers <<<<<<<, =======, >>>>>>>.
+    Parse the Git conflict log from {log_file_path}, extract all listed files,
+    and scan them for unresolved Git conflict markers.
   expected_output: >
-    A list of conflicted file paths in the given file list.
+    A list of valid file paths containing '<<<<<<<', '=======', and '>>>>>>>' markers.
   agent: conflict_detector
-  auto_execute: true
 
 resolve_conflicts_task:
   description: >
-    Resolve conflicts in the files detected in the previous task.
-
-    For each conflict:
-    - If keyword "WEBBAR" is not found in either block, ask the user.
-    - If keyword "WEBBAR" is found in both, ask the user.
-    - If keyword "WEBBAR" is found in one, auto-select that one.
-
-    Your final answer MUST be the resolved file contents saved back to disk.
-    If unresolved, generate human-readable `.conflicted` files or leave markers for manual editing.
+    Resolve each of the files with conflicts using the strategy:
+    - If "WEBBAR" exists in only one side, use that.
+    - If both or neither have it, prompt the user.
+    - If manual editing is chosen, open in VSCode.
   expected_output: >
-    Either the resolved file written to disk or left open in editor for manual intervention.
-  agent: conflict_resolver
+    All files resolved or marked for manual editing.
   context: [detect_conflicts_task]
+  agent: conflict_resolver
   human_input: true
 
 summary_task:
   description: >
-    Generate a summary report that lists:
-    - Files resolved automatically (keyword "WEBBAR" found)
-    - Files resolved by user input
-    - Files left for manual editing
-
-    Output the summary in markdown format.
+    Create a markdown summary of which files were resolved automatically,
+    which were resolved by user input, and which were left for manual edits.
   expected_output: >
-    A markdown file summarizing all resolutions.
-  agent: summary_reporter
+    A markdown file summarizing resolution outcomes.
   context:
     - detect_conflicts_task
     - resolve_conflicts_task
+  agent: summary_reporter
   output_file: output/conflicts.md
