@@ -11,6 +11,7 @@ resolve_conflicts_task:
     Resolve each of the files with conflicts using the strategy:
     - If "WEBBAR" exists in only one side, use that.
     - If both or neither have it, prompt the user.
+    - choose the best code to keep.
     - If manual editing is chosen, open in VSCode.
   expected_output: >
     All files resolved or marked for manual editing.
