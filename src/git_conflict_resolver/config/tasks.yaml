@@ -1,34 +1,30 @@
 detect_conflicts_task:
   description: >
-    Scan the local Git repository for all files that have unresolved merge conflicts.
-    Return a list of file paths that contain the conflict markers <<<<<<<, =======, >>>>>>>.
+    Parse the Git conflict log from {log_file_path}, extract all listed files,
+    and scan them for unresolved Git conflict markers.
   expected_output: >
-    A list of files with unresolved merge conflicts.
+    A list of valid file paths containing '<<<<<<<', '=======', and '>>>>>>>' markers.
   agent: conflict_detector
 
 resolve_conflicts_task:
   description: >
-    For each file with merge conflicts:
-    - If the keyword "WEBBAR" is found in the current or incoming block, automatically accept that block.
-    - If the keyword is not found, prompt the user to select:
-        1. Accept current block
-        2. Accept incoming block
-        3. Accept both blocks
-    Your final answer MUST be the fully resolved files saved back to disk.
+    Resolve each of the files with conflicts using the strategy:
+    - If "WEBBAR" exists in only one side, use that.
+    - If both or neither have it, prompt the user.
+    - choose the best code to keep.
+    - If manual editing is chosen, open in VSCode.
   expected_output: >
-    All files with conflicts resolved and saved back to disk.
-  context:
-    - detect_conflicts_task
+    All files resolved or marked for manual editing.
+  context: [detect_conflicts_task]
   agent: conflict_resolver
+  human_input: true
 
 summary_task:
   description: >
-    Generate a summary report that lists:
-    - Files resolved automatically (keyword "WEBBAR" found)
-    - Files resolved by user input
-    Output the summary in a markdown format.
+    Create a markdown summary of which files were resolved automatically,
+    which were resolved by user input, and which were left for manual edits.
   expected_output: >
-    A markdown file summarizing all resolutions, separated by automatic and manual resolutions.
+    A markdown file summarizing resolution outcomes.
   context:
     - detect_conflicts_task
     - resolve_conflicts_task

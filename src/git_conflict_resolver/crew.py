@@ -1,39 +1,33 @@
-from crewai import Agent, Crew, Process, Task, AgentConfig, TaskConfig
+from crewai import Agent, Crew, Process, Task, LLM
 from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from .tools.custom_tool import GitConflictResolverTool
+from git_conflict_resolver.tools.git_conflict_finder_tool import GitConflictFinderTool
+from git_conflict_resolver.tools.git_conflict_resolver_tool import GitConflictResolverTool
 from typing import List
-from crewai import LLM
-from pathlib import Path
+import os
+import agentops
 
-llm = LLM(
-    model="ollama/llama3",
-    base_url="http://localhost:11434"
+agentops.init(
+        default_tags=['crewai']
+)
+
+gemini_llm = LLM(
+    model="gemini/gemini-2.0-flash-001",
+    api_key=os.environ.get("GEMINI_API_KEY"),
+    temperature=0
 )
 
 @CrewBase
 class GitConflictResolverCrew:
-    """A crew for resolving Git conflicts using the GitConflictResolverTool."""
-
-    agents: List[BaseAgent]
-    tasks: List[Task]
-
-    def __init__(self):
-        self.git_tool = GitConflictResolverTool()
-
-        # Load agent/task configs
-        base_path = Path(__file__).parent / "config"
-        self.agents_config = AgentConfig.load(base_path / "agents.yaml", indexed=True)
-        self.tasks_config = TaskConfig.load(base_path / "tasks.yaml", indexed=True)
+    agents_config = 'config/agents.yaml'  # Add this
+    tasks_config = 'config/tasks.yaml'    # Add this
 
     @agent
     def conflict_detector(self) -> Agent:
         return Agent(
             config=self.agents_config['conflict_detector'],
-            llm=llm,
-            tools=[self.git_tool],
-            max_iter=3,
-            max_execution_time=60,
+            tools=[GitConflictFinderTool()],
+            llm=gemini_llm,
             verbose=True
         )
 
@@ -41,10 +35,8 @@ class GitConflictResolverCrew:
     def conflict_resolver(self) -> Agent:
         return Agent(
             config=self.agents_config['conflict_resolver'],
-            llm=llm,
-            tools=[self.git_tool],
-            max_iter=3,
-            max_execution_time=60,
+            tools=[GitConflictResolverTool()],
+            llm=gemini_llm,
             verbose=True
         )
 
@@ -52,43 +44,37 @@ class GitConflictResolverCrew:
     def summary_reporter(self) -> Agent:
         return Agent(
             config=self.agents_config['summary_reporter'],
-            llm=llm,
+            llm=gemini_llm,
             verbose=True
         )
 
-    @task
-    def detect_conflicts(self) -> Task:
-        return Task(
-            description=self.tasks_config['detect_conflicts_task']['description'],
-            expected_output=self.tasks_config['detect_conflicts_task']['expected_output'],
-            agent=self.conflict_detector()
+    @agent
+    def manager(self) -> Agent:
+        return Agent(
+            config=self.agents_config['manager'],
+            llm=gemini_llm,
+            verbose=True,
+            allow_delegation=True
         )
 
     @task
-    def resolve_conflicts(self) -> Task:
-        return Task(
-            description=self.tasks_config['resolve_conflicts_task']['description'],
-            expected_output=self.tasks_config['resolve_conflicts_task']['expected_output'],
-            agent=self.conflict_resolver(),
-            context=self.tasks_config['resolve_conflicts_task'].get('context', None)
-        )
+    def detect_conflicts_task(self) -> Task:
+        return Task(config=self.tasks_config['detect_conflicts_task'])
+
+    @task
+    def resolve_conflicts_task(self) -> Task:
+        return Task(config=self.tasks_config['resolve_conflicts_task'])
 
     @task
     def summary_task(self) -> Task:
-        return Task(
-            description=self.tasks_config['summary_task']['description'],
-            expected_output=self.tasks_config['summary_task']['expected_output'],
-            agent=self.summary_reporter(),
-            context=self.tasks_config['summary_task'].get('context', None),
-            output_file=self.tasks_config['summary_task'].get('output_file', 'conflict_summary.md')
-        )
+        return Task(config=self.tasks_config['summary_task'])
 
     @crew
     def crew(self) -> Crew:
-        """Creates the Conflict Resolver crew"""
         return Crew(
-            agents=self.agents,
+            agents=[self.conflict_detector(), self.conflict_resolver(), self.summary_reporter()],  
             tasks=self.tasks,
-            process=Process.sequential,
-            verbose=True,
+            manager_agent=self.manager(),  # Manager is separate
+            process=Process.hierarchical,
+            verbose=True
         )

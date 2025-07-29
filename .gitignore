@@ -1,3 +1,8 @@
 .env
 __pycache__/
 .DS_Store
+
+output/
+conflict.txt
+standard_management_policy_provider.cc
+BUILD.gn
